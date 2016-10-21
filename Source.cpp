@@ -1,6 +1,9 @@
-﻿#pragma comment(lib, "shlwapi")
+﻿#pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+
+#pragma comment(lib, "shlwapi")
 #pragma comment(lib, "winmm")
 #include <windows.h>
+#include <windowsx.h>
 #include <shlwapi.h>
 #include <stdio.h>
 #include "zip.h"
@@ -8,9 +11,34 @@
 #include "resource.h"
 
 #define WM_EXITTHREAD (WM_APP + 100)
+#define SPLITTER_WIDTH 4
 
 TCHAR szClassName[] = TEXT("HASKELL");
 WNDPROC lpfnOldClassProc;
+
+VOID SplitterDraw(HWND hWnd, INT x)
+{
+	const HDC hdc = GetDC(0);
+	if (hdc)
+	{
+		const HBRUSH hBrush = CreateSolidBrush(RGB(0, 0, 0));
+		if (hBrush)
+		{
+			RECT rect;
+			GetClientRect(hWnd, &rect);
+			const RECT rectSplit = { x - SPLITTER_WIDTH / 2, 0, x + SPLITTER_WIDTH / 2, rect.bottom };
+			ClientToScreen(hWnd, (LPPOINT)&rectSplit.left);
+			ClientToScreen(hWnd, (LPPOINT)&rectSplit.right);
+			SetROP2(hdc, R2_NOT);
+			SetBkMode(hdc, TRANSPARENT);
+			const HGDIOBJ hOldBrush = SelectObject(hdc, hBrush);
+			Rectangle(hdc, rectSplit.left, rectSplit.top, rectSplit.right, rectSplit.bottom);
+			SelectObject(hdc, hOldBrush);
+			DeleteObject(hBrush);
+		}
+		ReleaseDC(0, hdc);
+	}
+}
 
 BOOL DeleteDirectory(LPCTSTR lpPathName)
 {
@@ -160,7 +188,7 @@ void BuildAndRun(LPCSTR lpszCode, DWORD dwSize, LPCTSTR lpszTempPath, HWND hOutp
 	const DWORD dwBuildStartTime = timeGetTime();
 	if (!CreateProcess(0, szBuildCommand, 0, 0, TRUE, CREATE_NO_WINDOW, 0, 0, &si, &pi))
 	{
-		const DWORD len = SendMessageA(hOutputEdit, WM_GETTEXTLENGTH, 0, 0);
+		const DWORD_PTR len = SendMessageA(hOutputEdit, WM_GETTEXTLENGTH, 0, 0);
 		SendMessageA(hOutputEdit, EM_SETSEL, (WPARAM)len, (LPARAM)len);
 		SendMessageA(hOutputEdit, EM_REPLACESEL, 0, (LPARAM)"ビルド失敗\r\n\r\n");
 	}
@@ -185,7 +213,7 @@ void BuildAndRun(LPCSTR lpszCode, DWORD dwSize, LPCTSTR lpszTempPath, HWND hOutp
 		const DWORD dwRunStartTime = timeGetTime();
 		if (!CreateProcess(0, szRunCommand, 0, 0, TRUE, CREATE_NO_WINDOW, 0, 0, &si, &pi))
 		{
-			const DWORD len = SendMessageA(hOutputEdit, WM_GETTEXTLENGTH, 0, 0);
+			const DWORD_PTR len = SendMessageA(hOutputEdit, WM_GETTEXTLENGTH, 0, 0);
 			SendMessageA(hOutputEdit, EM_SETSEL, (WPARAM)len, (LPARAM)len);
 			SendMessageA(hOutputEdit, EM_REPLACESEL, 0, (LPARAM)"プログラムの起動失敗\r\n\r\n");
 		}
@@ -203,7 +231,7 @@ void BuildAndRun(LPCSTR lpszCode, DWORD dwSize, LPCTSTR lpszTempPath, HWND hOutp
 	ReadFile(hFile, lpszOutput, nFileSize, &d, 0);
 	lpszOutput[d] = 0;
 	{
-		const DWORD len = SendMessageA(hOutputEdit, WM_GETTEXTLENGTH, 0, 0);
+		const DWORD_PTR len = SendMessageA(hOutputEdit, WM_GETTEXTLENGTH, 0, 0);
 		SendMessageA(hOutputEdit, EM_SETSEL, (WPARAM)len, (LPARAM)len);
 		SendMessageA(hOutputEdit, EM_REPLACESEL, 0, (LPARAM)lpszOutput);
 		SendMessageA(hOutputEdit, EM_REPLACESEL, 0, (LPARAM)"\r\n");
@@ -213,7 +241,7 @@ void BuildAndRun(LPCSTR lpszCode, DWORD dwSize, LPCTSTR lpszTempPath, HWND hOutp
 	DeleteFile(szCodeFilePath);
 	DeleteFile(szOutputFilePath);
 	SetCurrentDirectory(szCurrentDirectory);
-	const DWORD len = SendMessageA(hOutputEdit, WM_GETTEXTLENGTH, 0, 0);
+	const DWORD_PTR len = SendMessageA(hOutputEdit, WM_GETTEXTLENGTH, 0, 0);
 	SendMessageA(hOutputEdit, EM_SETSEL, (WPARAM)len, (LPARAM)len);
 	CHAR szTime[1024];
 	wsprintfA(szTime, "ビルド時間: %d msec\r\n実行時間: %d msec\r\n", dwBuildTime, dwRunTime);
@@ -255,7 +283,7 @@ void BuildAndExport(HWND hWnd, LPCSTR lpszCode, DWORD dwSize, LPCTSTR lpszTempPa
 	const DWORD dwBuildStartTime = timeGetTime();
 	if (!CreateProcess(0, szBuildCommand, 0, 0, TRUE, CREATE_NO_WINDOW, 0, 0, &si, &pi))
 	{
-		const DWORD len = SendMessageA(hOutputEdit, WM_GETTEXTLENGTH, 0, 0);
+		const DWORD_PTR len = SendMessageA(hOutputEdit, WM_GETTEXTLENGTH, 0, 0);
 		SendMessageA(hOutputEdit, EM_SETSEL, (WPARAM)len, (LPARAM)len);
 		SendMessageA(hOutputEdit, EM_REPLACESEL, 0, (LPARAM)"ビルド失敗\r\n\r\n");
 	}
@@ -298,7 +326,7 @@ void BuildAndExport(HWND hWnd, LPCSTR lpszCode, DWORD dwSize, LPCTSTR lpszTempPa
 	ReadFile(hFile, lpszOutput, nFileSize, &d, 0);
 	lpszOutput[d] = 0;
 	{
-		const DWORD len = SendMessageA(hOutputEdit, WM_GETTEXTLENGTH, 0, 0);
+		const DWORD_PTR len = SendMessageA(hOutputEdit, WM_GETTEXTLENGTH, 0, 0);
 		SendMessageA(hOutputEdit, EM_SETSEL, (WPARAM)len, (LPARAM)len);
 		SendMessageA(hOutputEdit, EM_REPLACESEL, 0, (LPARAM)lpszOutput);
 		SendMessageA(hOutputEdit, EM_REPLACESEL, 0, (LPARAM)"\r\n");
@@ -308,7 +336,7 @@ void BuildAndExport(HWND hWnd, LPCSTR lpszCode, DWORD dwSize, LPCTSTR lpszTempPa
 	DeleteFile(szCodeFilePath);
 	DeleteFile(szOutputFilePath);
 	SetCurrentDirectory(szCurrentDirectory);
-	const DWORD len = SendMessageA(hOutputEdit, WM_GETTEXTLENGTH, 0, 0);
+	const DWORD_PTR len = SendMessageA(hOutputEdit, WM_GETTEXTLENGTH, 0, 0);
 	SendMessageA(hOutputEdit, EM_SETSEL, (WPARAM)len, (LPARAM)len);
 	CHAR szTime[1024];
 	wsprintfA(szTime, "ビルド時間: %d msec\r\n", dwBuildTime);
@@ -398,6 +426,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	static DATA* pData;
 	static HANDLE hThread;
 	static DWORD dwParam;
+	static double percent = 0.5;
+	static int oldposx;
 	switch (msg)
 	{
 	case WM_CREATE:
@@ -409,36 +439,72 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		lstrcpy(pData->szTempPath, szTempDirectoryPath);
 		hThread = CreateThread(0, 0, ThreadExpandModule, (LPVOID)pData, 0, &dwParam);
 		hFont = CreateFont(20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, TEXT("Consolas"));
-		hInputEdit = CreateWindow(TEXT("EDIT"), TEXT("main = putStrLn \"Hello, World!\"\r\n"), WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | WS_TABSTOP | ES_MULTILINE | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_WANTRETURN, 0, 0, 0, 0, hWnd, 0, ((LPCREATESTRUCT)lParam)->hInstance, 0);
+		hInputEdit = CreateWindowEx(WS_EX_CLIENTEDGE, TEXT("EDIT"), TEXT("main = putStrLn \"Hello, World!\"\r\n"), WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | WS_TABSTOP | ES_MULTILINE | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_WANTRETURN, 0, 0, 0, 0, hWnd, 0, ((LPCREATESTRUCT)lParam)->hInstance, 0);
 		SendMessage(hInputEdit, EM_LIMITTEXT, 0, 0);
 		{
 			const int tab = 16;
 			SendMessage(hInputEdit, EM_SETTABSTOPS, 1, (LPARAM)&tab);
 		}
-		lpfnOldClassProc = (WNDPROC)SetWindowLong(hInputEdit, GWL_WNDPROC, (LONG)MultiLineEditWndProc);
-		hOutputEdit = CreateWindow(TEXT("EDIT"), TEXT("ビルドの環境を構築しています..."), WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | WS_TABSTOP | ES_MULTILINE | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_READONLY, 0, 0, 0, 0, hWnd, 0, ((LPCREATESTRUCT)lParam)->hInstance, 0);
+		lpfnOldClassProc = (WNDPROC)SetWindowLongPtr(hInputEdit, GWLP_WNDPROC, (LONG_PTR)MultiLineEditWndProc);
+		hOutputEdit = CreateWindowEx(WS_EX_CLIENTEDGE, TEXT("EDIT"), TEXT("ビルドの環境を構築しています..."), WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | WS_TABSTOP | ES_MULTILINE | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_READONLY, 0, 0, 0, 0, hWnd, 0, ((LPCREATESTRUCT)lParam)->hInstance, 0);
 		SendMessage(hOutputEdit, EM_LIMITTEXT, 0, 0);
 		SendMessage(hInputEdit, WM_SETFONT, (WPARAM)hFont, 0);
 		SendMessage(hOutputEdit, WM_SETFONT, (WPARAM)hFont, 0);
 		break;
 	case WM_EXITTHREAD:
-	{
-		WaitForSingleObject(hThread, INFINITE);
-		CloseHandle(hThread);
-		hThread = 0;
-		const BOOL bExit = pData->bAbort;
-		GlobalFree(pData);
-		pData = 0;
-		SetWindowText(hOutputEdit, TEXT("ビルドの環境が整いました。"));
-		if (bExit) PostMessage(hWnd, WM_CLOSE, 0, 0);
-	}
-	break;
+		{
+			WaitForSingleObject(hThread, INFINITE);
+			CloseHandle(hThread);
+			hThread = 0;
+			const BOOL bExit = pData->bAbort;
+			GlobalFree(pData);
+			pData = 0;
+			SetWindowText(hOutputEdit, TEXT("ビルドの環境が整いました。"));
+			if (bExit) PostMessage(hWnd, WM_CLOSE, 0, 0);
+		}
+		break;
 	case WM_SETFOCUS:
 		SetFocus(hInputEdit);
 		break;
 	case WM_SIZE:
-		MoveWindow(hInputEdit, 0, 0, LOWORD(lParam) / 2, HIWORD(lParam), 1);
-		MoveWindow(hOutputEdit, LOWORD(lParam) / 2, 0, LOWORD(lParam) / 2, HIWORD(lParam), 1);
+		{
+			RECT rect;
+			GetClientRect(hWnd, &rect);
+			const int nWidth = rect.right;
+			const int nHeight = rect.bottom;
+			const int nEdit1Width = (int)(nWidth * percent);
+			MoveWindow(hInputEdit, 0, 0, nEdit1Width - SPLITTER_WIDTH / 2, nHeight, TRUE);
+			MoveWindow(hOutputEdit, nEdit1Width + SPLITTER_WIDTH / 2, 0, nWidth - nEdit1Width - SPLITTER_WIDTH / 2, nHeight, TRUE);
+		}
+		break;
+	case WM_LBUTTONDOWN:
+		SetCapture(hWnd);
+		oldposx = -1;
+		break;
+	case WM_MOUSEMOVE:
+		if (GetCapture() == hWnd)
+		{
+			const int posx = GET_X_LPARAM(lParam);
+			RECT rect;
+			GetClientRect(hWnd, &rect);
+			percent = (double)posx / (double)rect.right;
+			if (percent < 0.0) percent = 0.0;
+			else if (percent > 1.0) percent = 1.0;
+			const int x = (int)(rect.right * percent);
+			if (oldposx != x)
+			{
+				if (oldposx > 0) SplitterDraw(hWnd, oldposx);
+				SplitterDraw(hWnd, x);
+				oldposx = x;
+			}
+		}
+		break;
+	case WM_LBUTTONUP:
+		if (GetCapture() == hWnd)
+		{
+			ReleaseCapture();
+			SendMessage(hWnd, WM_SIZE, 0, 0);
+		}
 		break;
 	case WM_COMMAND:
 		switch (LOWORD(wParam))
@@ -543,7 +609,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPreInst, LPSTR pCmdLine, int 
 		DLGWINDOWEXTRA,
 		hInstance,
 		LoadIcon(hInstance,(LPCTSTR)IDI_ICON1),
-		0,
+		LoadCursor(0,IDC_SIZEWE),
 		0,
 		0,
 		szClassName
@@ -583,5 +649,5 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPreInst, LPSTR pCmdLine, int 
 		}
 	}
 	DestroyAcceleratorTable(hAccel);
-	return msg.wParam;
+	return (int)msg.wParam;
 }
